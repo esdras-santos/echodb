@@ -8,37 +8,26 @@ import (
 	"path/filepath"
 )
 
-func Load(location string, autoDump bool) *echodb {
-	db := echodb{location, autoDump, nil}
-	db.Load(location,autoDump)
+
+// Load/reload the database
+func Load(location string, isAutoDump bool) *echodb {
+	db := echodb{location, isAutoDump, nil}
+	db.Load(location,isAutoDump)
 	return &db
 }
 
 type echodb struct {
 	location string
-	autoDump bool
+	isAutoDump bool
 	db       map[string]interface{}
 }
 
-func (database *echodb) getItem(item string) interface{} {
-	return database.Get(item)
-}
-
-func (database *echodb) setitem(key, value string) bool {
-	return database.Set(key, value)
-}
-
-// Syntax 
-func (database *echodb) delitem(key string) bool {	
-	return database.Remove(key)
-}
-
 // Loads, reloadds or changes the path to the db file
-func (database *echodb) Load(location string, autoDump bool) bool {
+func (database *echodb) Load(location string, isAutoDump bool) bool {
 	loca, err := filepath.Abs(location)
 	handler(err)
 	database.location = loca
-	database.autoDump = autoDump
+	database.isAutoDump = isAutoDump
 	_, err = os.Stat(database.location)
 	if os.IsNotExist(err) {
 		database.db = map[string]interface{}{}
@@ -65,13 +54,14 @@ func (database *echodb) loaddb() {
 	handler(err)
 }
 
-// Write/Save the json automatically when "autoDump" is enabled
+// Write/Save the json automatically when "isAutoDump" is enabled
 func (database *echodb) autoDumpDb() {
-	if database.autoDump {
+	if database.isAutoDump {
 		database.Dump()
 	}
 }
 
+// Set/add a key value to the database
 func (database *echodb) Set(key, value string) bool{
 	database.db[key] = value
 	database.autoDumpDb()
@@ -205,6 +195,81 @@ func (database *echodb) ListValueExists(listName, value string) bool{
 		}
 	}
 	return false
+}
+
+// Create a map 
+func (database *echodb) MapCreate(mapName string){
+	database.db[mapName] = map[string]string{}
+	database.autoDumpDb()
+}
+
+// Add a key-value to the map 
+func (database *echodb) MapAdd(mapName string, newPair map[string]string){
+	database.db[mapName] = newPair
+	database.autoDumpDb()
+}
+
+// Return value of a key in a map
+func (database *echodb) MapGet(mapName, mapKey string) string{
+	return database.db[mapName].(map[string]string)[mapKey]
+}
+
+// Return the entire map
+func (database *echodb) MapGetAll(mapName string) map[string]string{
+	return database.db[mapName].(map[string]string)
+}
+
+// Remove a map from the database
+func (database *echodb) MapRemove(mapName string) bool{
+	delete(database.db, mapName)
+	database.autoDumpDb()
+	return true
+}
+
+// Remove one key-value from the map
+func (database *echodb) MapRemoveOne(mapName, mapKey string) bool{
+	delete(database.db[mapName].(map[string]string),database.db[mapName].(map[string]string)[mapKey])
+	database.autoDumpDb()
+	return true
+}
+
+// Return all the keys from a map
+func (database *echodb) MapKeys(mapName string) []string{
+	keys := []string{}
+	for k := range database.db[mapName].(map[string]string) {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
+//	Return all the values from a map
+func (database *echodb) MapValues(mapName string) []string{
+	values := []string{}
+	for value := range database.db[mapName].(map[string]string){
+		values = append(values, value )
+	}
+	return values
+}
+
+// Checks if a key exist in the map
+func (database *echodb) MapExists(mapName, mapKey string) bool{
+	_,ok := database.db[mapName].(map[string]interface{})[mapKey].(map[string]string)
+	return ok 
+}
+
+// Merge two maps together into mapName1
+func (database *echodb) MapMerge(mapName1, mapName2 string) bool{
+	for i,value := range database.db[mapName2].(map[string]string){
+		database.db[mapName2].(map[string]string)[i] = value
+	}
+	return true
+}
+
+// Delete all the database
+func (database *echodb) DeleteDatabase() bool{
+	database.db = map[string]interface{}{}
+	database.autoDumpDb()
+	return true
 }
 
 func handler(err error) {
