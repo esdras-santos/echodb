@@ -1,15 +1,15 @@
 package echodb
 
 import (
-	"io/ioutil"
 	"encoding/json"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
+	"reflect"
 )
 
-
-// Load/reload the database
+// Load the database...
 func Load(location string, isAutoDump bool) *echodb {
 	db := echodb{location, isAutoDump, nil}
 	db.Load(location,isAutoDump)
@@ -22,7 +22,7 @@ type echodb struct {
 	db       map[string]interface{}
 }
 
-// Loads, reloadds or changes the path to the db file
+// Loads, reloads or changes the path to the db file
 func (database *echodb) Load(location string, isAutoDump bool) bool {
 	loca, err := filepath.Abs(location)
 	handler(err)
@@ -197,15 +197,16 @@ func (database *echodb) ListValueExists(listName, value string) bool{
 	return false
 }
 
-// Create a map 
-func (database *echodb) MapCreate(mapName string){
-	database.db[mapName] = map[string]string{}
-	database.autoDumpDb()
-}
-
-// Add a key-value to the map 
+// Add a key-value to the map ::checked
 func (database *echodb) MapAdd(mapName string, newPair map[string]string){
-	database.db[mapName] = newPair
+	_,ok := database.db[mapName].(map[string]string)
+	if !ok{
+		database.db[mapName] = map[string]string{}
+	}
+	key := reflect.ValueOf(newPair).MapKeys()
+	strkeys := make([]string, len(key))
+	strkeys[0] = key[0].String()
+	database.db[mapName].(map[string]string)[strkeys[0]] = newPair[strkeys[0]]
 	database.autoDumpDb()
 }
 
